@@ -76,3 +76,10 @@ The **Cloud Upload Plugin** allows you to seamlessly upload WordPress media file
 ## Contributing
 
 Contributions are welcome! If you find a bug or have an idea for an improvement, please open an issue or submit a pull request
+
+## Future Features and Roadmap
+
+Learn more about upcoming features and development plans in the following documents:
+
+- [Future Features](./docs/FUTURE_FEATURES.md)
+- [Roadmap](./docs/ROADMAP.md)
