@@ -26,7 +26,7 @@ The **Cloud Upload Plugin** allows you to seamlessly upload WordPress media file
 1. **Clone the Repository:**
 
    ```bash
-   git clone https://github.com/yourusername/cloud-upload-plugin.git wp-content/plugins/cloud-upload-plugin
+   git clone https://github.com/Hexcss/wordpress-cloud-upload-plugin.git wp-content/plugins/cloud-upload-plugin
    ```
 2. **Navigate to the Plugin Directory:**
 
@@ -72,3 +72,7 @@ The **Cloud Upload Plugin** allows you to seamlessly upload WordPress media file
 
     - File Not Found: Ensure the Google Cloud Storage bucket is publicly accessible.
     - Permissions Issues: Double-check the service account permissions and that the service account JSON is correctly configured in the plugin setting
+
+## Contributing
+
+Contributions are welcome! If you find a bug or have an idea for an improvement, please open an issue or submit a pull request
