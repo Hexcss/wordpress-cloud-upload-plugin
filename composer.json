@@ -1,0 +1,19 @@
+{
+    "name": "hexcss/custom-cloud-upload-wordpress",
+    "description": "Plugin to handle upload of media files to Google Cloud Storage",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "Hexcss\\CustomCloudUploadWordpress\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Hexcss",
+            "email": "cadersuay.javier@gmail.com"
+        }
+    ],
+    "require": {
+        "google/cloud-storage": "^1.42"
+    }
+}

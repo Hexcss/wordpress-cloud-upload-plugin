@@ -1,0 +1,43 @@
+# Ignore WordPress core files
+wordpress/
+
+# Ignore Composer dependencies
+vendor/
+composer.lock
+
+# Ignore environment variables
+.env
+
+# Ignore Docker files
+docker-compose.yml
+db_data/
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
+
+# Ignore PHPStorm project files
+.idea/
+
+# Ignore logs and other temporary files
+*.log
+*.tmp
+*.cache
+*.bak
+
+# Ignore compiled and minified files
+*.min.js
+*.min.css
+
+# Ignore node modules (if you use Node.js for some reason)
+node_modules/
+
+# Ignore build artifacts
+build/
+dist/
+
+# Ignore personal VSCode settings
+.vscode/
+
+# Ignore any uploaded content that shouldn't be versioned
+uploads/
