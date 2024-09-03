@@ -1,5 +1,5 @@
 {
-  "name": "yourname/cloud-upload-plugin",
+  "name": "hexcss/wp-cloud-upload",
   "description": "A WordPress plugin to upload media files to Google Cloud Storage.",
   "type": "wordpress-plugin",
   "license": "MIT",
