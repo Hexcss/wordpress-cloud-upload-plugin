@@ -11,7 +11,14 @@ if (!defined('ABSPATH')) {
 }
 
 // Include the Composer autoload file
-require_once plugin_dir_path(__FILE__) . 'vendor/autoload.php';
+if (file_exists(ABSPATH . 'vendor/autoload.php')) {
+    require_once ABSPATH . 'vendor/autoload.php';
+} elseif (file_exists(plugin_dir_path(__FILE__) . 'vendor/autoload.php')) {
+    require_once plugin_dir_path(__FILE__) . 'vendor/autoload.php';
+} else {
+    // No autoloader found, cannot continue.
+    wp_die('Autoloader not found. Please run composer install.');
+}
 
 // Include necessary files
 // Include necessary files
