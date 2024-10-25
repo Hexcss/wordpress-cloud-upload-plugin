@@ -1,10 +1,6 @@
 # Ignore WordPress core files
 wordpress/
 
-# Ignore Composer dependencies
-vendor/
-composer.lock
-
 # Ignore environment variables
 .env
 
@@ -35,9 +31,6 @@ node_modules/
 # Ignore build artifacts
 build/
 dist/
-
-# Ignore personal VSCode settings
-.vscode/
 
 # Ignore any uploaded content that shouldn't be versioned
 uploads/
