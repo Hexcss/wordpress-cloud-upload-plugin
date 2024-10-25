@@ -8,7 +8,7 @@ This document outlines the roadmap for potential future features and enhancement
 
 ### **Phase 1: High Priority & High Impact**
 
-#### 1. Migrate All Local Files to a Bucket
+#### 1. Migrate All Local Files to a Bucket (✔️)
 - **Priority**: High
 - **Complexity**: Medium
 - **User Impact**: High
@@ -34,7 +34,7 @@ This document outlines the roadmap for potential future features and enhancement
 
 ### **Phase 2: Medium Priority & High Impact**
 
-#### 3. Bring Files from a Bucket to the Media Manager
+#### 3. Bring Files from a Bucket to the Media Manager (✔️)
 - **Priority**: Medium
 - **Complexity**: High
 - **User Impact**: High

@@ -16,6 +16,20 @@ class Cloud_Storage_Client
         ]);
     }
 
+    public function listFiles($prefix = '')
+    {
+        $bucket = $this->storage->bucket($this->bucketName);
+        $options = [];
+
+        if (!empty($prefix)) {
+            $options['prefix'] = $prefix;
+        }
+
+        $objects = $bucket->objects($options);
+
+        return $objects;
+    }
+
     public function uploadFile($filePath, $uploadName)
     {
         $bucket = $this->storage->bucket($this->bucketName);
@@ -31,7 +45,7 @@ class Cloud_Storage_Client
             "https://storage.googleapis.com/%s/%s",
             $this->bucketName,
             $uploadName
-        );
+        );  
 
         return $publicUrl;
     }

@@ -4,20 +4,35 @@ class Cloud_Upload_Admin_Settings_Page
 {
     public function __construct()
     {
-        add_action("admin_menu", [$this, "add_plugin_page"]);
-        add_action("admin_init", [$this, "page_init"]);
+        add_action('admin_menu', [$this, 'add_plugin_page']);
+        add_action('admin_init', [$this, 'page_init']);
     }
 
     public function add_plugin_page()
     {
-        add_options_page(
-            "Cloud Upload Settings",
-            "Cloud Upload",
-            "manage_options",
-            "cloud-upload-settings",
-            [$this, "create_admin_page"]
+        // Create the top-level menu
+        add_menu_page(
+            'Cloud Upload',                  // Page title
+            'Cloud Upload',                  // Menu title
+            'manage_options',                // Capability
+            'cloud-upload',                  // Menu slug
+            [$this, 'create_admin_page'],    // Function to display the page
+            'dashicons-cloud',               // Icon URL or Dashicons class
+            66                               // Position in the menu
+        );
+
+        // Add the Settings submenu (This will rename the main menu item)
+        add_submenu_page(
+            'cloud-upload',                  // Parent slug
+            'Cloud Upload Settings',         // Page title
+            'Settings',                      // Menu title
+            'manage_options',                // Capability
+            'cloud-upload',                  // Menu slug (same as parent to override the parent page)
+            [$this, 'create_admin_page']     // Function to display the page
         );
     }
+
+
 
     public function create_admin_page()
     {
