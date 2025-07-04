@@ -53,7 +53,7 @@ class Cloud_Upload_Handler
                 $upload['file'] = ''; // Clear local file path
 
                 // After the file is uploaded, we need to wait until the attachment is created to update its metadata
-                add_action('add_attachment', function($attachmentId) use ($cloudUrl, $uploadPath) {
+                add_action('add_attachment', function ($attachmentId) use ($cloudUrl, $uploadPath) {
                     $this->update_attachment_metadata($attachmentId, $cloudUrl, $uploadPath);
                 });
             }
@@ -64,6 +64,13 @@ class Cloud_Upload_Handler
 
     private function update_attachment_metadata($attachmentId, $cloudUrl, $uploadPath)
     {
+        if (defined('DOING_AJAX') && DOING_AJAX) {
+            $action = $_REQUEST['action'] ?? '';
+            if (in_array($action, ['start_bucket_scan', 'scan_bucket_batch'], true)) {
+                return;
+            }
+        }
+
         // Update the _wp_attached_file meta to store the upload path (relative path)
         update_post_meta($attachmentId, '_wp_attached_file', $uploadPath);
 

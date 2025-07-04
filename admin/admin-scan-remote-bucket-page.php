@@ -59,16 +59,23 @@ class Cloud_Upload_Admin_Scan_Bucket_Page
 
         $objects = $this->storageClient->listFiles($prefix);
         if (empty(iterator_to_array($objects))) {
-            wp_send_json_success([
-                'message' => 'No files found in the bucket.',
-            ]);
+            wp_send_json_success(['message' => 'No files found in the bucket.']);
         }
 
-        // build an array of file names
-        $names = [];
+        // only import these extensions
+        $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        $names   = [];
+
         foreach ($objects as $object) {
-            /** @var \Google\Cloud\Storage\StorageObject $object */
-            $names[] = $object->name();
+            $name = $object->name();
+            $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            if (in_array($ext, $allowed, true)) {
+                $names[] = $name;
+            }
+        }
+
+        if (empty($names)) {
+            wp_send_json_success(['message' => 'No images found in the bucket.']);
         }
 
         $scanId = uniqid('cloud_scan_', true);
@@ -100,6 +107,7 @@ class Cloud_Upload_Admin_Scan_Bucket_Page
         $end   = min($start + $this->batch_size, count($files));
 
         $batch_results = [];
+
         for ($i = $start; $i < $end; $i++) {
             $fileName = $files[$i];
             $fileUrl  = sprintf(
@@ -157,7 +165,7 @@ class Cloud_Upload_Admin_Scan_Bucket_Page
 
     private function create_attachment($fileName, $fileUrl)
     {
-        // 1) Insert the attachment post (no local file required)
+        // 1) Insert the attachment post; no local file needed
         $filetype   = wp_check_filetype($fileName);
         $attachment = [
             'guid'           => $fileUrl,
@@ -171,16 +179,16 @@ class Cloud_Upload_Admin_Scan_Bucket_Page
             return false;
         }
 
-        // 2) Tell WP there are no real thumbnails—use the same file for every size
+        // 2) Tell WP there are no real thumbnails (always use full image)
         $metadata = [
-            'file'    => $fileName, // this is used for the “full” URL
-            'width'   => 0,
-            'height'  => 0,
-            'sizes'   => [],        // no generated sizes
+            'file'   => $fileName,
+            'width'  => 0,
+            'height' => 0,
+            'sizes'  => [],
         ];
         wp_update_attachment_metadata($attach_id, $metadata);
 
-        // 3) Save your GCS URL so get_attachment_url() returns it
+        // 3) Store GCS URL so get_attachment_url() returns it
         update_post_meta($attach_id, '_cloud_storage_url', $fileUrl);
         update_post_meta($attach_id, '_wp_attached_file',  $fileName);
 
