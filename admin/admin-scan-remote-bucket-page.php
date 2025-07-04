@@ -157,7 +157,8 @@ class Cloud_Upload_Admin_Scan_Bucket_Page
 
     private function create_attachment($fileName, $fileUrl)
     {
-        $filetype = wp_check_filetype($fileName);
+        // 1) Insert the attachment post (no local file required)
+        $filetype   = wp_check_filetype($fileName);
         $attachment = [
             'guid'           => $fileUrl,
             'post_mime_type' => $filetype['type'] ?? 'application/octet-stream',
@@ -165,16 +166,24 @@ class Cloud_Upload_Admin_Scan_Bucket_Page
             'post_content'   => '',
             'post_status'    => 'inherit',
         ];
-
-        $id = wp_insert_attachment($attachment);
-        if (is_wp_error($id)) {
+        $attach_id = wp_insert_attachment($attachment);
+        if (is_wp_error($attach_id)) {
             return false;
         }
 
-        wp_update_attachment_metadata($id, ['file' => $fileName]);
-        update_post_meta($id, '_cloud_storage_url', $fileUrl);
-        update_post_meta($id, '_wp_attached_file',  $fileName);
+        // 2) Tell WP there are no real thumbnails—use the same file for every size
+        $metadata = [
+            'file'    => $fileName, // this is used for the “full” URL
+            'width'   => 0,
+            'height'  => 0,
+            'sizes'   => [],        // no generated sizes
+        ];
+        wp_update_attachment_metadata($attach_id, $metadata);
 
-        return $id;
+        // 3) Save your GCS URL so get_attachment_url() returns it
+        update_post_meta($attach_id, '_cloud_storage_url', $fileUrl);
+        update_post_meta($attach_id, '_wp_attached_file',  $fileName);
+
+        return $attach_id;
     }
 }
