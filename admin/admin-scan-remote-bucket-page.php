@@ -57,12 +57,10 @@ class Cloud_Upload_Admin_Scan_Bucket_Page
             ? sanitize_text_field($_POST['options']['prefix'])
             : '';
 
+        // Fetch the iterator but do NOT drain it
         $objects = $this->storageClient->listFiles($prefix);
-        if (empty(iterator_to_array($objects))) {
-            wp_send_json_success(['message' => 'No files found in the bucket.']);
-        }
 
-        // only import these extensions
+        // Only import these extensions
         $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
         $names   = [];
 
@@ -78,6 +76,7 @@ class Cloud_Upload_Admin_Scan_Bucket_Page
             wp_send_json_success(['message' => 'No images found in the bucket.']);
         }
 
+        // Store just the names + progress in a transient
         $scanId = uniqid('cloud_scan_', true);
         set_transient($scanId, [
             'files'    => $names,
@@ -86,6 +85,8 @@ class Cloud_Upload_Admin_Scan_Bucket_Page
             'errors'   => [],
             'current'  => 0,
         ], $this->transient_expiry);
+
+        error_log("ScanBucket[{$scanId}]: initialized with " . count($names) . " images");
 
         wp_send_json_success([
             'message' => 'Scan initialized.',
@@ -108,42 +109,62 @@ class Cloud_Upload_Admin_Scan_Bucket_Page
 
         $batch_results = [];
 
+        // instrumentation
+        $batchStart = microtime(true);
+        error_log("ScanBucket[{$scan_id}]: batch starting files {$start}–" . ($end - 1));
+
         for ($i = $start; $i < $end; $i++) {
-            $fileName = $files[$i];
-            $fileUrl  = sprintf(
+            $fileName    = $files[$i];
+            $fileUrl     = sprintf(
                 'https://storage.googleapis.com/%s/%s',
                 $this->storageClient->bucketName,
                 $fileName
             );
+            $itemStart   = microtime(true);
 
             if ($this->attachment_exists($fileUrl)) {
+                $status = 'skipped';
                 $data['skipped']++;
-                $batch_results[] = ['file' => $fileName, 'status' => 'skipped'];
             } else {
                 $aid = $this->create_attachment($fileName, $fileUrl);
                 if ($aid) {
+                    $status = 'imported';
                     $data['imported']++;
-                    $batch_results[] = ['file' => $fileName, 'status' => 'imported'];
                 } else {
+                    $status = 'error';
                     $data['errors'][] = "Failed to import: {$fileName}";
-                    $batch_results[] = ['file' => $fileName, 'status' => 'error'];
                 }
             }
+
+            $duration = microtime(true) - $itemStart;
+            error_log("ScanBucket[{$scan_id}]: {$status} {$fileName} in " . round($duration, 3) . "s");
+
+            $batch_results[] = [
+                'file'     => $fileName,
+                'status'   => $status,
+                'duration' => round($duration, 3),
+            ];
         }
 
+        // update transient
         $data['current'] = $end;
         set_transient($scan_id, $data, $this->transient_expiry);
 
+        $batchDuration = microtime(true) - $batchStart;
+        error_log("ScanBucket[{$scan_id}]: batch processed " . ($end - $start)
+            . " items in " . round($batchDuration, 3) . "s");
+
         wp_send_json_success([
-            'done'     => ($end >= count($files)),
-            'progress' => [
+            'done'           => ($end >= count($files)),
+            'batch_duration' => round($batchDuration, 3),
+            'batch'          => $batch_results,
+            'progress'       => [
                 'total'     => count($files),
                 'processed' => $data['current'],
                 'imported'  => $data['imported'],
                 'skipped'   => $data['skipped'],
                 'errors'    => $data['errors'],
             ],
-            'batch'    => $batch_results,
         ]);
     }
 
