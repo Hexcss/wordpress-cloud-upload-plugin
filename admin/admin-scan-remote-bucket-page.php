@@ -38,9 +38,9 @@ class Cloud_Upload_Admin_Scan_Bucket_Page
 
     public function create_scan_bucket_page()
     {
-        ?>
+?>
         <div class="wrap">
-            <h1>Cloud Upload - Scan Remote Bucket</h1>
+            <h1>Cloud Upload – Scan Remote Bucket</h1>
             <p>Scan your Google Cloud Storage bucket and import files into the Media Library.</p>
 
             <form id="scan-bucket-form">
@@ -48,49 +48,91 @@ class Cloud_Upload_Admin_Scan_Bucket_Page
                     <input type="checkbox" id="scan-by-prefix" name="scan-by-prefix">
                     Only scan files with a specific prefix
                 </label>
-                <input type="text" id="prefix" name="prefix" placeholder="Enter prefix" style="display: none;"><br><br>
-
-                <button id="start-scan" class="button button-primary">Start Scan</button>
+                <input type="text" id="prefix" name="prefix" placeholder="Enter prefix" style="display:none;">
+                <p>
+                    <button id="start-scan" class="button button-primary">Start Scan</button>
+                </p>
             </form>
 
-            <div id="scan-progress" style="margin-top: 20px;"></div>
+            <div id="scan-progress-container" style="display:none; margin-top:20px;">
+                <div class="progress" style="height:20px;">
+                    <div id="scan-progress-bar" class="progress-bar" role="progressbar" style="width:0%;">0%</div>
+                </div>
+                <div id="scan-log" style="margin-top:10px; max-height:200px; overflow:auto; background:#fff; padding:8px; border:1px solid #ccd0d4;"></div>
+            </div>
 
-            <script type="text/javascript">
-                jQuery(document).ready(function($) {
-                    $('#scan-by-prefix').on('change', function() {
-                        if ($(this).is(':checked')) {
-                            $('#prefix').show();
-                        } else {
-                            $('#prefix').hide();
-                        }
-                    });
-
-                    $('#start-scan').on('click', function(e) {
-                        e.preventDefault();
-                        const options = {
-                            prefix: $('#scan-by-prefix').is(':checked') ? $('#prefix').val() : ''
-                        };
-                        $('#scan-progress').html('Scanning bucket...');
-                        $.ajax({
-                            url: ajaxurl,
-                            method: 'POST',
-                            data: {
-                                action: 'start_bucket_scan',
-                                options: options
-                            },
-                            success: function(response) {
-                                $('#scan-progress').html(response.data.message);
-                            },
-                            error: function() {
-                                $('#scan-progress').html('Scan failed. Please try again.');
-                            }
-                        });
-                    });
-                });
-            </script>
-
+            <div id="scan-results" style="margin-top:20px;"></div>
         </div>
-        <?php
+
+        <script>
+            jQuery(function($) {
+                $('#scan-by-prefix').on('change', function() {
+                    $('#prefix').toggle(this.checked);
+                });
+
+                $('#start-scan').on('click', function(e) {
+                    e.preventDefault();
+                    var prefix = $('#scan-by-prefix').is(':checked') ? $('#prefix').val() : '';
+
+                    // reset UI
+                    $('#start-scan').prop('disabled', true);
+                    $('#scan-results').empty();
+                    $('#scan-log').empty();
+                    $('#scan-progress-bar').css('width', '0%').text('0%');
+                    $('#scan-progress-container').show();
+
+                    // kick off scan
+                    $.post(ajaxurl, {
+                            action: 'start_bucket_scan',
+                            options: {
+                                prefix: prefix
+                            }
+                        }, function(response) {
+                            if (!response.success) {
+                                $('#scan-results').html(
+                                    '<div class="notice notice-error"><p>' + response.data + '</p></div>'
+                                );
+                                return;
+                            }
+
+                            // structured JSON expected from handler
+                            var data = response.data;
+                            // 1) build summary
+                            var html = '<div class="notice notice-success">';
+                            html += '<strong>Scan Complete</strong><br>';
+                            html += 'Imported: ' + data.imported + '<br>';
+                            html += 'Skipped: ' + data.skipped + '<br>';
+                            if (data.errors.length) {
+                                html += '<details><summary style="cursor:pointer;color:#a00;">Errors (' + data.errors.length + ')</summary>';
+                                html += '<ul>';
+                                data.errors.forEach(function(err) {
+                                    html += '<li>' + err + '</li>';
+                                });
+                                html += '</ul></details>';
+                            }
+                            html += '</div>';
+
+                            $('#scan-results').html(html);
+                        }, 'json')
+                        .fail(function() {
+                            $('#scan-results').html(
+                                '<div class="notice notice-error"><p>Scan failed. Please try again.</p></div>'
+                            );
+                        })
+                        .always(function() {
+                            $('#start-scan').prop('disabled', false);
+                        })
+                        .progress(function(evt) {
+                            // this will never fire unless you switch to XHR2 + progress events,
+                            // but here’s where you’d update the bar if you streamed events…
+                        });
+                });
+
+                // Optional: intercept console.log from PHP via SSE or chunked output
+                // and push lines into #scan-log, updating the bar.
+            });
+        </script>
+<?php
     }
 
     public function start_bucket_scan()
@@ -99,50 +141,48 @@ class Cloud_Upload_Admin_Scan_Bucket_Page
             wp_send_json_error('Cloud storage is not configured correctly.');
         }
 
-        $options = $_POST['options'];
-        $prefix = !empty($options['prefix']) ? $options['prefix'] : '';
-
-        // Get all files from the bucket
-        $bucketFiles = $this->storageClient->listFiles($prefix);
+        $options      = $_POST['options'];
+        $prefix       = !empty($options['prefix']) ? $options['prefix'] : '';
+        $bucketFiles  = $this->storageClient->listFiles($prefix);
 
         if (empty($bucketFiles)) {
-            wp_send_json_success(['message' => 'No files found in the bucket.']);
+            wp_send_json_success([
+                'imported' => 0,
+                'skipped'  => 0,
+                'errors'   => [],
+            ]);
         }
 
-        $importedCount = 0;
-        $skippedCount = 0;
-        $errors = [];
+        $imported = 0;
+        $skipped  = 0;
+        $errors   = [];
 
         foreach ($bucketFiles as $object) {
             $fileName = $object->name();
-            $fileUrl = sprintf(
+            $fileUrl  = sprintf(
                 'https://storage.googleapis.com/%s/%s',
                 $this->storageClient->bucketName,
                 $fileName
             );
 
-            // Check if the file already exists in the Media Library
             if ($this->attachment_exists($fileUrl)) {
-                $skippedCount++;
+                $skipped++;
                 continue;
             }
 
-            // Create attachment in the Media Library
             $attachmentId = $this->create_attachment($fileName, $fileUrl);
-
             if ($attachmentId) {
-                $importedCount++;
+                $imported++;
             } else {
-                $errors[] = "Failed to import file: {$fileName}";
+                $errors[] = "Failed to import: {$fileName}";
             }
         }
 
-        $responseMessage = "Scan complete: {$importedCount} files imported, {$skippedCount} files skipped.";
-        if (!empty($errors)) {
-            $responseMessage .= "<br>Errors: <ul><li>" . implode("</li><li>", $errors) . "</li></ul>";
-        }
-
-        wp_send_json_success(['message' => $responseMessage]);
+        wp_send_json_success([
+            'imported' => $imported,
+            'skipped'  => $skipped,
+            'errors'   => $errors,
+        ]);
     }
 
     private function attachment_exists($fileUrl)
