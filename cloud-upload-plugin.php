@@ -29,10 +29,11 @@ require_once plugin_dir_path(__FILE__) . 'includes/cloud-storage-client.php';
 require_once plugin_dir_path(__FILE__) . 'includes/cloud-upload-handler.php';
 
 // Initialize the settings and migration page
-function cloud_upload_plugin_init() {
+function cloud_upload_plugin_init()
+{
     new Cloud_Upload_Admin_Settings_Page();
     new Cloud_Upload_Admin_Migration_Page();
-    new Cloud_Upload_Admin_Scan_Bucket_Page(); 
+    new Cloud_Upload_Admin_Scan_Bucket_Page();
     new Cloud_Upload_Handler();
 }
 add_action('plugins_loaded', 'cloud_upload_plugin_init');
@@ -40,7 +41,8 @@ add_action('plugins_loaded', 'cloud_upload_plugin_init');
 // Add the filter function here
 add_filter('wp_get_attachment_url', 'my_custom_wp_get_attachment_url', 10, 2);
 
-function my_custom_wp_get_attachment_url($url, $post_id) {
+function my_custom_wp_get_attachment_url($url, $post_id)
+{
     $cloud_url = get_post_meta($post_id, '_cloud_storage_url', true);
     if (!empty($cloud_url)) {
         return $cloud_url;
@@ -50,10 +52,15 @@ function my_custom_wp_get_attachment_url($url, $post_id) {
 
 add_filter('upload_dir', 'my_custom_upload_dir');
 
-function my_custom_upload_dir($dirs) {
+function my_custom_upload_dir($dirs)
+{
     $options = get_option('cloud_upload_options');
-    $bucket_url = 'https://storage.googleapis.com/' . $options['bucket_name'];
 
-    $dirs['baseurl'] = $bucket_url;
+    // Check if options are valid and the bucket_name is set
+    if (is_array($options) && !empty($options['bucket_name'])) {
+        $bucket_url = 'https://storage.googleapis.com/' . $options['bucket_name'];
+        $dirs['baseurl'] = $bucket_url;
+    }
+
     return $dirs;
 }
